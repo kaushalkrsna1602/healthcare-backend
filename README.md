@@ -1,6 +1,10 @@
 # Healthcare Backend System
 
-A Node.js backend system for managing healthcare records, built with Express.js and PostgreSQL.
+A Node.js backend system for managing healthcare records, built with Express.js and MOngoDB.
+
+## Deployment
+
+The application is deployed at: [Deployment Link] (To be added)
 
 ## Features
 
@@ -11,12 +15,10 @@ A Node.js backend system for managing healthcare records, built with Express.js 
 - RESTful API endpoints
 - Data validation
 - Error handling
-- PostgreSQL database with Sequelize ORM
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
-- PostgreSQL (v12 or higher)
 - npm or yarn
 
 ## Installation
@@ -36,29 +38,18 @@ npm install
 ```
 PORT=3000
 NODE_ENV=development
-DB_NAME=healthcare_db
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=localhost
-DB_PORT=5432
+MONGODB_URI
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100 
 JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRES_IN=24h
 ```
 
-4. Create the PostgreSQL database:
-```bash
-createdb healthcare_db
-```
-
-5. Run database migrations:
-```bash
-npx sequelize-cli db:migrate
-```
-
-6. Start the server:
+5. Start the server:
 ```bash
 npm run dev
 ```
+
 
 ## API Endpoints
 
@@ -134,13 +125,31 @@ The API uses standard HTTP status codes and returns errors in the following form
 - `npm start` - Start production server
 - `npm test` - Run tests
 
+## Deployment
+
+The application is deployed at: [Deployment Link] (To be added)
+
 ## Security
 
 - Passwords are hashed using bcrypt
 - JWT tokens are used for authentication
 - Input validation using express-validator
 - Environment variables for sensitive data
+- CORS enabled for secure cross-origin requests
+- Rate limiting to prevent abuse
 
-## License
+## Project Structure
 
-ISC 
+```
+healthcare-backend/
+├── src/
+│   ├── config/         # Configuration files
+│   ├── middleware/     # Custom middleware
+│   ├── models/         # Database models
+│   ├── routes/         # API routes
+│   └── index.js          # Express application
+├── .env               # Environment variables
+├── .gitignore
+├── package.json
+└── README.md
+```
