@@ -12,8 +12,8 @@ router.use(auth);
 // Create mapping
 router.post('/',
   [
-    body('patientId').isUUID().withMessage('Valid patient ID is required'),
-    body('doctorId').isUUID().withMessage('Valid doctor ID is required')
+    body('patientId').isMongoId().withMessage('Valid patient ID is required'),
+    body('doctorId').isMongoId().withMessage('Valid doctor ID is required')
   ],
   async (req, res) => {
     try {
@@ -26,10 +26,8 @@ router.post('/',
 
       // Check if patient exists and belongs to the user
       const patient = await Patient.findOne({
-        where: {
-          id: patientId,
-          userId: req.user.id
-        }
+        _id: patientId,
+        userId: req.user._id
       });
 
       if (!patient) {
@@ -40,9 +38,7 @@ router.post('/',
       }
 
       // Check if doctor exists
-      const doctor = await Doctor.findOne({
-        where: { id: doctorId }
-      });
+      const doctor = await Doctor.findById(doctorId);
 
       if (!doctor) {
         return res.status(404).json({
@@ -53,11 +49,9 @@ router.post('/',
 
       // Check if mapping already exists
       const existingMapping = await Mapping.findOne({
-        where: {
-          patientId,
-          doctorId,
-          status: 'active'
-        }
+        patientId,
+        doctorId,
+        status: 'active'
       });
 
       if (existingMapping) {
@@ -88,23 +82,20 @@ router.post('/',
 // Get all mappings
 router.get('/', async (req, res) => {
   try {
-    const mappings = await Mapping.findAll({
-      include: [
-        {
-          model: Patient,
-          where: { userId: req.user.id },
-          required: true
-        },
-        {
-          model: Doctor,
-          required: true
-        }
-      ]
-    });
+    const mappings = await Mapping.find({})
+      .populate({
+        path: 'patientId',
+        match: { userId: req.user._id },
+        select: '-__v'
+      })
+      .populate('doctorId', '-__v');
+
+    // Filter out mappings where patientId is null (not belonging to user)
+    const filteredMappings = mappings.filter(m => m.patientId);
 
     res.json({
       status: 'success',
-      data: { mappings }
+      data: { mappings: filteredMappings }
     });
   } catch (error) {
     res.status(500).json({
@@ -117,27 +108,23 @@ router.get('/', async (req, res) => {
 // Get mappings for a specific patient
 router.get('/:patientId', async (req, res) => {
   try {
-    const mappings = await Mapping.findAll({
-      where: {
-        patientId: req.params.patientId,
-        status: 'active'
-      },
-      include: [
-        {
-          model: Patient,
-          where: { userId: req.user.id },
-          required: true
-        },
-        {
-          model: Doctor,
-          required: true
-        }
-      ]
-    });
+    const mappings = await Mapping.find({
+      patientId: req.params.patientId,
+      status: 'active'
+    })
+      .populate({
+        path: 'patientId',
+        match: { userId: req.user._id },
+        select: '-__v'
+      })
+      .populate('doctorId', '-__v');
+
+    // Filter out mappings where patientId is null (not belonging to user)
+    const filteredMappings = mappings.filter(m => m.patientId);
 
     res.json({
       status: 'success',
-      data: { mappings }
+      data: { mappings: filteredMappings }
     });
   } catch (error) {
     res.status(500).json({
@@ -150,25 +137,21 @@ router.get('/:patientId', async (req, res) => {
 // Delete mapping
 router.delete('/:id', async (req, res) => {
   try {
-    const mapping = await Mapping.findOne({
-      where: { id: req.params.id },
-      include: [
-        {
-          model: Patient,
-          where: { userId: req.user.id },
-          required: true
-        }
-      ]
+    const mapping = await Mapping.findById(req.params.id).populate({
+      path: 'patientId',
+      match: { userId: req.user._id },
+      select: '-__v'
     });
 
-    if (!mapping) {
+    if (!mapping || !mapping.patientId) {
       return res.status(404).json({
         status: 'error',
         message: 'Mapping not found'
       });
     }
 
-    await mapping.update({ status: 'inactive' });
+    mapping.status = 'inactive';
+    await mapping.save();
 
     res.json({
       status: 'success',

@@ -26,7 +26,7 @@ router.post('/',
 
       const doctor = await Doctor.create({
         ...req.body,
-        userId: req.user.id
+        userId: req.user._id
       });
 
       res.status(201).json({
@@ -45,7 +45,7 @@ router.post('/',
 // Get all doctors
 router.get('/', async (req, res) => {
   try {
-    const doctors = await Doctor.findAll();
+    const doctors = await Doctor.find();
 
     res.json({
       status: 'success',
@@ -62,9 +62,7 @@ router.get('/', async (req, res) => {
 // Get specific doctor
 router.get('/:id', async (req, res) => {
   try {
-    const doctor = await Doctor.findOne({
-      where: { id: req.params.id }
-    });
+    const doctor = await Doctor.findById(req.params.id);
 
     if (!doctor) {
       return res.status(404).json({
@@ -102,12 +100,14 @@ router.put('/:id',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const doctor = await Doctor.findOne({
-        where: {
-          id: req.params.id,
-          userId: req.user.id
-        }
-      });
+      const doctor = await Doctor.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          userId: req.user._id
+        },
+        req.body,
+        { new: true, runValidators: true }
+      );
 
       if (!doctor) {
         return res.status(404).json({
@@ -115,8 +115,6 @@ router.put('/:id',
           message: 'Doctor not found'
         });
       }
-
-      await doctor.update(req.body);
 
       res.json({
         status: 'success',
@@ -134,11 +132,9 @@ router.put('/:id',
 // Delete doctor
 router.delete('/:id', async (req, res) => {
   try {
-    const doctor = await Doctor.findOne({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+    const doctor = await Doctor.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id
     });
 
     if (!doctor) {
@@ -147,8 +143,6 @@ router.delete('/:id', async (req, res) => {
         message: 'Doctor not found'
       });
     }
-
-    await doctor.destroy();
 
     res.json({
       status: 'success',
